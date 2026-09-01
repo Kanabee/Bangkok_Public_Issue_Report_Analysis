@@ -1,6 +1,3 @@
-# Bangkok_Public_Issue_Report_Analysis
-NLP and Exploratory Data Analysis of Traffy Fondue Reports
-
 # Bangkok Public Issue Report Analysis
 
 ## NLP & Data Analysis of Bangkok Public Issue Reports
