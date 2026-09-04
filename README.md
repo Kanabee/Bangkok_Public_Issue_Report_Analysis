@@ -1,317 +1,268 @@
 # Bangkok Public Issue Report Analysis
 
-## NLP & Data Analysis of Bangkok Public Issue Reports
+NLP and exploratory analysis of 20,730 citizen complaint reports submitted to
+Bangkok's Traffy Fondue platform, turning free-text Thai complaints into
+category, district and resolution signals a city team could act on.
 
-## Project Overview
-
-This project analyzes public issue reports in Bangkok to identify common urban problems, compare issue patterns across districts, and explore recurring topics in Thai-language comments.
-
-The main objective is to transform unstructured public complaint data into **actionable insights that can support urban operations, issue prioritization, and resource allocation**.
-
-The project combines:
-
-* Exploratory Data Analysis (EDA)
-* Thai Natural Language Processing (NLP)
-* Rule-based text classification
-* District-level issue analysis
-* TF-IDF text representation
-* Unsupervised topic clustering using MiniBatch K-Means
+**Data:** Traffy Fondue open data · 20,730 reports · 65 districts · 202 subdistricts
+**Window:** 25 May – 12 June 2022 (19 days)
+**Notebook:** `Bangkok_Public_Issue_Analysis.ipynb`
 
 ---
 
-## Business Problem
+## Headline Findings
 
-City authorities receive a large number of public issue reports covering different types of urban problems.
+**1. Footpaths dominate, and by a wide margin.**
+21.0% of reports mention footpath problems — roughly double the next category.
 
-However, raw complaint data alone does not clearly indicate:
+| Issue | Reports | Share |
+|---|---|---|
+| ทางเท้า (Footpath) | 4,351 | **21.0%** |
+| จราจร (Traffic) | 2,257 | 10.9% |
+| ขยะ/กลิ่น/น้ำเสีย (Waste, odour, wastewater) | 2,110 | 10.2% |
+| น้ำท่วม/ระบายน้ำ (Flooding, drainage) | 2,091 | 10.1% |
+| ความปลอดภัย (Safety) | 1,717 | 8.3% |
+| แสงสว่าง (Lighting) | 1,560 | 7.5% |
+| ถนน (Roads) | 1,514 | 7.3% |
 
-* Which problems occur most frequently?
-* Which districts receive the most reports?
-* Which issues are particularly concentrated within specific districts?
-* What recurring topics appear in Thai-language comments?
-* How should operational teams prioritize problems and allocate resources?
+Categories overlap by design — a report can mention several problems — so
+shares sum to more than 100%.
 
-This project uses data analysis and NLP techniques to convert public reports into structured information that can support these decisions.
+**2. Volume and rate point at different districts.**
+Chatuchak files the most reports in absolute terms (1,462). But Pom Prap Sattru
+Phai, with 256 reports, devotes **42.6%** of them to footpaths — the highest
+concentration in the city, and twice the citywide rate.
 
----
+| District | Footpath reports | Footpath rate | All reports |
+|---|---|---|---|
+| ป้อมปราบศัตรูพ่าย | 109 | **42.6%** | 256 |
+| พระนคร | 93 | 33.0% | 282 |
+| วัฒนา | 166 | 30.2% | 550 |
+| จตุจักร | 410 | 28.0% | **1,462** |
 
-## Analysis Workflow
+Volume indicates workload. Rate indicates a concentrated local problem. A
+ranking built on either alone sends resources to the wrong place.
 
-`Data Collection → Data Validation → Data Cleaning → Exploratory Data Analysis → Thai Text Classification → District Analysis → Topic Discovery → Operational Insights`
-
-### 1. Data Collection & Validation
-
-The public issue-report dataset was loaded and inspected for:
-
-* Data types
-* Missing values
-* Duplicate records
-* District information
-* Issue descriptions
-* Thai-language comments
-* Report status and timestamps
-
-The analysis contains **20,730 reports**.
-
----
-
-### 2. Exploratory Data Analysis
-
-Exploratory analysis was performed to understand the distribution of reports across Bangkok.
-
-The analysis examines:
-
-* Number of reports by district
-* Distribution of issue categories
-* Report volume
-* Issue concentration within districts
-
-This provides an initial view of where public issues are being reported and which problems occur most frequently.
+**3. Only 13.1% of reports carry a completion photo.**
+2,708 of 20,730. Treated here as a signal worth investigating rather than a
+performance measure — absence may reflect documentation practice rather than
+inaction.
 
 ---
 
-## Thai Text Classification
+## Validating the Rules Instead of Trusting Them
 
-Thai-language comments were classified into practical urban issue categories using transparent keyword-based rules.
+The keyword dictionary matches **64.5%** of reports to at least one category.
+That number alone says nothing about whether the matches are *correct*.
 
-The classification identifies categories such as:
+The dataset carries a `type` column — the category Traffy itself assigned —
+which makes the rules measurable rather than merely plausible.
 
-* Sidewalk problems
-* Traffic
-* Garbage / odor / wastewater
-* Flooding / drainage
-* Safety
-* Lighting
-* Other urban infrastructure issues
+| Rule | Platform type | Precision | Recall | F1 |
+|---|---|---|---|---|
+| น้ำท่วม/ระบายน้ำ | น้ำท่วม | [XX] | [XX] | [XX] |
+| ทางเท้า | ทางเท้า | [XX] | [XX] | [XX] |
+| ถนน | ถนน | [XX] | [XX] | [XX] |
+| แสงสว่าง | แสงสว่าง | [XX] | [XX] | [XX] |
 
-The rule-based classification successfully identified predefined issue categories in approximately **64.46% of reports**.
+*Run the notebook to populate.*
 
-Using transparent rules also makes it possible to understand why a report was assigned to a particular category.
+This is not a clean ground truth. Platform categories are single-label while
+the rules are multi-label, and the two taxonomies were designed independently,
+so low precision does not automatically mean error — a report about a flooded
+footpath is filed once but should trigger two rules.
 
----
-
-## Key Findings
-
-### 1. Sidewalk Issues Were the Most Frequently Identified Problem
-
-**Sidewalk-related issues (ทางเท้า)** were the most frequently identified category, representing approximately **20.99% of reports**.
-
-This suggests that pedestrian infrastructure represents an important area for operational attention.
+**Low recall is the actionable signal.** It marks vocabulary the dictionary is
+missing, and the clustering section is where that vocabulary gets found.
 
 ---
 
-### 2. Chatuchak Had the Highest Reporting Volume
+## Topic Discovery: A First Attempt That Failed
 
-**Chatuchak (จตุจักร)** recorded the largest overall reporting volume with approximately **1,462 reports**.
+The initial implementation vectorised comments as character n-grams (3–5,
+`char_wb`). Character n-grams are appealing for Thai because they sidestep
+word-boundary detection, which Thai requires and English does not.
 
-High report volume can indicate a larger operational workload and may help identify districts requiring additional attention or resources.
+**The result was unusable.**
 
----
+| Cluster | Reports | Share | Defining n-grams |
+|---|---|---|---|
+| 2 | 5,782 | 27.9% | `ค่ะ`, `ที่`, `ไม่`, `แจ้ง` |
+| 9 | 4,045 | 19.5% | `ที่`, `ให้`, `การ`, `เป็น` |
+| 4 | 460 | 2.2% | `ลาดพร้าว` (a place name) |
 
-### 3. Pom Prap Sattru Phai Had a High Concentration of Sidewalk Issues
+Two clusters absorbed **48% of all reports**, defined by politeness particles
+and function words. The model had grouped reports by how politely they were
+written, not by what they were about. A third keyed on a neighbourhood name.
+Cluster descriptions also came back as fragments like `างเท้` — unreadable to
+any stakeholder.
 
-Among eligible districts, **Pom Prap Sattru Phai (ป้อมปราบศัตรูพ่าย)** had the highest rate of sidewalk-related reports at approximately **42.58%**.
+The cause was simple: a Thai stopword list existed in the notebook but was
+applied only to the word cloud, never to the vectoriser.
 
-This demonstrates why analyzing only the total number of complaints may not be sufficient.
+### What changed
 
-A district may not have the largest overall report volume but may still have a strong concentration of a specific local problem.
+Comments are now tokenised with PyThaiNLP's `newmm` engine, filtered through an
+expanded stopword list covering function words *and* politeness particles
+(`ครับ`, `ค่ะ`, `รบกวน`, `ขอบคุณ`), then vectorised as word unigrams and
+bigrams.
 
----
+This gives up the tokeniser-independence of character n-grams for two things
+worth more: clusters driven by content rather than register, and labels made of
+real words.
 
-## Volume vs. Issue Rate
+| | Before | After |
+|---|---|---|
+| Largest cluster | 27.9% | [XX]% |
+| Cluster labels | n-gram fragments | words |
 
-Two perspectives were used when comparing districts:
-
-**Issue Volume**
-The number of reports related to a particular issue.
-
-**Issue Rate**
-The percentage of all reports within a district that mention that issue.
-
-Using both metrics provides a more balanced view of urban problems.
-
-For example:
-
-* High volume can indicate a large operational workload.
-* High issue rate can indicate a concentrated local problem.
-
-Districts with very few reports were excluded from rate rankings to reduce unstable comparisons.
-
----
-
-## Thai NLP & Word Analysis
-
-Thai text processing was performed using **PyThaiNLP**.
-
-Comments were tokenized and analyzed to identify frequently occurring words within selected issue categories.
-
-A WordCloud was also used to visualize recurring terms in Thai-language public reports.
-
-This helps provide additional context beyond structured issue categories.
+Each cluster now also reports **rule coverage** — the share of its reports the
+keyword dictionary already catches. Clusters below 50% are the dictionary's
+blind spots and the direct input to the next iteration of `ISSUE_KEYWORDS`.
 
 ---
 
-## Unsupervised Topic Discovery
+## Method
 
-Rule-based classification can only identify issues that have already been defined in the keyword dictionary.
+```
+Collection → Validation → Cleaning → EDA
+    → Rule-based Thai classification → Validation against platform labels
+    → District comparison (volume and rate)
+    → Topic discovery → Resolution analysis → Recommendations
+```
 
-To discover additional patterns, an unsupervised NLP approach was also applied.
+**Why transparent keyword rules rather than a classifier.** City staff need to
+review and extend the categories themselves. A rule that reads
+`น้ำท่วม|น้ำขัง|ระบายน้ำ|ท่ออุดตัน` can be corrected by the person who knows
+the domain; a trained model cannot. The rules are then measured against
+platform labels so that transparency does not become an excuse for being wrong.
 
-Thai comments were converted into **TF-IDF character n-gram features** and grouped using **MiniBatch K-Means clustering**.
+**Why districts with under 100 reports are excluded from rate rankings.** A
+district with 12 reports can show a 50% issue rate from six comments. Rate
+rankings without a volume floor surface sampling noise at the top.
 
-Character n-grams were selected because they can capture useful Thai-language patterns without depending entirely on word-boundary detection.
-
-The resulting TF-IDF matrix contained:
-
-**20,730 reports × 12,000 text features**
-
-The analysis grouped the comments into **15 exploratory topic clusters**.
-
-Representative character patterns and sample reports were then inspected to understand the themes captured by each cluster.
-
----
-
-## Why Use Both Rule-Based Classification and Clustering?
-
-The two approaches serve different purposes.
-
-### Rule-Based Classification
-
-Useful for:
-
-* Known business categories
-* Transparent classification
-* Operational reporting
-* Easy interpretation
-
-### Unsupervised Clustering
-
-Useful for:
-
-* Discovering unknown patterns
-* Exploring recurring themes
-* Identifying topics outside predefined categories
-
-Combining both approaches provides a more flexible framework for analyzing public issue reports.
-
----
-
-## Business & Operational Recommendations
-
-### Prioritize Using Both Volume and Rate
-
-Operational teams should consider both the absolute number of reports and the concentration of issues within each district.
-
-This prevents smaller but highly concentrated local problems from being overlooked.
-
-### Route Issues to Responsible Teams
-
-Issue categories can be mapped to responsible operational teams such as:
-
-* Road and sidewalk maintenance
-* Drainage
-* Waste management
-* Traffic management
-* Public safety
-* Lighting and infrastructure
-
-This can support faster issue routing and operational planning.
-
-### Monitor District-Level Patterns
-
-District-level monitoring can help identify areas where specific problems repeatedly occur.
-
-This information can support targeted inspections and resource allocation.
-
-### Monitor Emerging Topics
-
-Unsupervised topic clustering can complement predefined categories by identifying recurring themes that may not yet exist in the classification rules.
-
----
-
-## Technologies Used
-
-* Python
-* Pandas
-* NumPy
-* Matplotlib
-* Seaborn
-* PyThaiNLP
-* Scikit-learn
-* TF-IDF
-* MiniBatch K-Means
-* WordCloud
-* Google Colab / Jupyter Notebook
+**Why counts are not normalised by population.** They should be, and are not,
+because population and road-length data were not joined in. Report volume as
+used here measures problems *and* willingness to report them, and those cannot
+be separated in this extract.
 
 ---
 
 ## Limitations
 
-This analysis should be interpreted with several limitations in mind.
+- **The window is 19 days: 25 May – 12 June 2022.** This is the onset of the
+  Bangkok rainy season, so the 10.1% flooding share almost certainly overstates
+  the annual figure. No seasonal claim can be made from this data, and no trend
+  either — 19 days cannot separate a structural problem from a single storm.
+- **Reports represent platform users**, not Bangkok residents. District volume
+  partly measures reporting propensity.
+- **Keyword rules miss synonyms, misspellings, sarcasm and context.** Coverage
+  is 64.5%; the validation section quantifies the error where a platform
+  counterpart exists.
+- **16.2% of comments repeat text seen elsewhere** in the data. Duplicate rows
+  were removed, but these carry distinct ids and timestamps, so they survive
+  deduplication. They may be genuine separate incidents or duplicate
+  submissions.
+- **Completion photos are a proxy for resolution, not a measure of it.**
+- **Cluster labels describe term co-occurrence, not verified topics.**
 
-* Keyword-based classification depends on the quality and coverage of the predefined keyword dictionary.
-* Approximately 35% of reports were not captured by the predefined rule-based issue categories.
-* Complaint volume does not necessarily represent the true frequency of problems because reporting behavior may differ across districts.
-* Topic clusters generated through unsupervised learning require human interpretation.
-* Text clustering identifies linguistic similarity and should not automatically be treated as confirmed operational categories.
+## Next Steps
+
+- A full-year extract, to separate seasonal effects from structural ones.
+- Normalise report counts by district population and road length.
+- Extend the dictionary from the low-coverage clusters, then re-score against
+  platform labels to confirm recall improved.
+- Measure time-to-resolution from timestamps rather than photo presence.
+- Train a supervised classifier on the platform labels and compare it to the
+  rules on accuracy *and* reviewability — the rules may lose on the first and
+  still win overall.
 
 ---
 
-## Future Improvements
+## Tech Stack
 
-Potential improvements include:
+Python · Pandas · NumPy · PyThaiNLP (newmm tokenisation) · Scikit-learn
+(TF-IDF, MiniBatch K-Means) · Matplotlib · Seaborn · WordCloud · Google Colab
 
-* Expanding and validating the Thai issue keyword dictionary
-* Developing supervised NLP classification models
-* Evaluating classification accuracy using manually labeled reports
-* Adding geographic visualization and issue heatmaps
-* Analyzing issue trends over time
-* Monitoring unresolved-report aging by district
-* Developing an interactive dashboard for operational monitoring
-* Using topic discovery to identify emerging issue categories
+## Running It
 
----
+```bash
+pip install pythainlp wordcloud pandas numpy scikit-learn matplotlib seaborn
+jupyter notebook Bangkok_Public_Issue_Analysis.ipynb
+```
 
-## Conclusion
-
-This project demonstrates how **data analysis and Natural Language Processing can transform unstructured public complaint data into actionable information**.
-
-By combining exploratory analysis, transparent Thai text classification, district-level comparisons, and unsupervised topic discovery, the analysis provides multiple perspectives on urban public issues.
-
-The overall analytical process can be summarized as:
-
-**Public Reports → Data Cleaning → Thai NLP → Issue Classification → District Analysis → Topic Discovery → Operational Insights**
-
-The results demonstrate how data can support more systematic **problem prioritization, resource allocation, and operational decision-making**.
+Data loads from a public URL; no credentials required. Run all cells in order.
+A Thai font is downloaded automatically for the charts.
 
 ---
 
 # 日本語概要
 
-## バンコク市民問題レポート分析
+## バンコク市民通報データの分析
 
-本プロジェクトでは、バンコクで報告された市民からの問題・苦情データを対象に、**データ分析およびタイ語の自然言語処理（NLP）**を行いました。
+バンコク市の市民通報プラットフォーム「Traffy Fondue」に寄せられた
+**20,730件のタイ語自由記述**を対象に、自然言語処理と探索的分析を行い、
+カテゴリ・地区・対応状況という行政が実際に使える形に変換したプロジェクトです。
 
-主な目的は、市民から寄せられた非構造化データを分析し、都市問題の優先順位付けや行政リソースの配分に活用できる情報へ変換することです。
+**対象期間：** 2022年5月25日〜6月12日（19日間）／65区・202地区
 
-分析では、
+### 主な発見
 
-* データクレンジング・EDA
-* 地区別レポート分析
-* タイ語テキスト処理
-* キーワードベースの問題分類
-* TF-IDFによるテキスト特徴量化
-* MiniBatch K-Meansによるトピッククラスタリング
+**1. 歩道に関する通報が突出して多い**
+全体の **21.0%**（4,351件）が歩道の問題に言及しており、第2位の交通渋滞
+（10.9%）の約2倍でした。
 
-を実施しました。
+**2. 「件数」と「比率」は異なる区を指す**
+通報件数が最多なのはチャトゥチャック区（1,462件）ですが、区内通報に占める
+歩道問題の比率が最も高いのはポムプラープサットゥルーパイ区で **42.6%**
+（256件中109件）と、市全体平均の約2倍でした。
 
-分析の結果、**歩道（ทางเท้า）に関する問題が約20.99%と最も多く**、また地区ごとに問題の件数だけでなく、特定の問題が占める割合にも大きな違いがあることが確認できました。
+件数は業務量を、比率は地域固有の問題の集中度を示します。どちらか一方だけで
+優先順位を決めると、資源配分の対象を誤ります。
 
-さらに、既存のキーワード分類だけでは把握できないテーマを探索するため、TF-IDFとクラスタリングを使用してタイ語コメントから潜在的なトピックを分析しました。
+**3. 完了写真が添付されているのは全体の 13.1%**
+ただしこれは対応状況の記録慣行の差を反映している可能性があり、対応実績の指標
+ではなく「確認すべき兆候」として扱っています。
 
-本プロジェクトを通して、
+### 手法上の工夫
 
-**データ収集 → データ分析 → NLP → 問題分類 → 地区比較 → 課題発見 → 意思決定支援**
+**1. ルールを「信頼する」のではなく「測定する」**
+キーワード辞書による分類は全体の 64.5% をカバーしましたが、この数値は分類が
+「正しいか」を何も語りません。本データには Traffy 側が付与した `type` 列が
+存在するため、これを参照点として各ルールの適合率・再現率を算出しました。
 
-という一連のデータ分析プロセスを実践しました。
+単一ラベル対複数ラベルという設計の違いがあるため完全な正解データではありま
+せんが、独立した第三者の判断であり、検証コストはほぼゼロです。特に**再現率の
+低さは、辞書に不足している語彙を直接指し示します。**
 
+**2. トピック抽出の失敗と、その修正**
+当初は文字n-gram（char_wb, 3〜5）を使用しました。タイ語は単語境界がないため、
+形態素解析に依存しない文字n-gramは合理的な選択に見えます。
+
+しかし結果は使用に耐えないものでした。**2つのクラスタが全体の48%を占め、その
+特徴語は「ค่ะ」「ครับ」「ที่」「ให้」といった文末表現・機能語**でした。
+モデルは「何について書かれているか」ではなく「どれだけ丁寧に書かれているか」で
+分類していたことになります。さらに別のクラスタは「ラートプラーオ」という地名
+に反応していました。
+
+原因は明快で、ノートブック内にタイ語ストップワードは定義されていたものの、
+ワードクラウドにのみ適用され、ベクトル化には使われていませんでした。
+
+修正として、PyThaiNLP の `newmm` による形態素解析を導入し、機能語に加えて
+**文末表現・依頼表現（ครับ／ค่ะ／รบกวน／ขอบคุณ）を含むストップワードリスト**を
+適用した上で、単語unigram・bigramでベクトル化しました。文字n-gramの持つ
+「解析器非依存」という利点は失いますが、内容に基づくクラスタリングと、
+実際の単語による解釈可能なラベルが得られます。
+
+**3. 分析を次の改善につなげる構造**
+各クラスタについて、キーワード辞書がどの程度カバーできているかを算出しました。
+カバー率が低いクラスタは辞書の盲点であり、そこから抽出した語彙を辞書に追加し、
+再度 `type` 列に対して再現率を測り直すという改善サイクルを組み込んでいます。
+
+### 限界の明示
+
+**対象期間は19日間のみであり、バンコクの雨季開始時期と重なります。** そのため
+浸水関連の 10.1% という比率は年間平均を大きく上回っている可能性が高く、本データ
+から季節性やトレンドを論じることはできません。また、通報件数はプラットフォーム
+利用者の分布を反映しており、問題の実際の発生量と「通報する意欲」を分離できて
+いません。人口・道路延長による正規化は今後の課題として明記しています。
